@@ -13,14 +13,16 @@ import { TeamInvite } from "@/components/team/team-invite"
 import { NotificationCreate } from "@/components/notification/notification-create"
 import { NotificationRules } from "@/components/notification/notification-rules"
 
+import { UserSignUp } from "@/components/user/user-signup"
+
 export default function Home() {
-  const { 
-    currentPage, 
-    setCurrentPage, 
-    selectedMemo, 
+  const {
+    currentPage,
+    setCurrentPage,
+    selectedMemo,
     setSelectedMemo,
     selectedSchedule,
-    setSelectedSchedule 
+    setSelectedSchedule
   } = useNavigation()
 
   const handleViewMemo = (memo: any) => {
@@ -57,6 +59,8 @@ export default function Home() {
         return <NotificationCreate />
       case "notification-rules":
         return <NotificationRules />
+      case "user-signup":
+        return <UserSignUp />
       default:
         return <MainPage onSelectTeam={() => setCurrentPage("dashboard")} onNavigate={setCurrentPage} />
     }

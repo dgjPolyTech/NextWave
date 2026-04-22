@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { TeamCreate } from "@/components/team/team-create"
+import { UserSignUp } from "@/components/user/user-signup"
 
 const mockTeams = [
   { id: 1, name: "디자인 팀", members: 5, description: "UI/UX 및 브랜드 디자인 담당" },
@@ -44,20 +45,31 @@ export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
             </div>
           </div>
 
-          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-xl font-bold">
-                <Plus className="mr-2 h-5 w-5" />
-                새 팀 생성
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>새 팀 생성</DialogTitle>
-              </DialogHeader>
-              <TeamCreate onSuccess={() => setIsCreateModalOpen(false)} />
-            </DialogContent>
-          </Dialog>
+          <div className="flex flex-wrap items-center gap-3">
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+              <DialogTrigger asChild>
+                <Button className="shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-xl font-bold">
+                  <Plus className="mr-2 h-5 w-5" />
+                  새 팀 생성
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>새 팀 생성</DialogTitle>
+                </DialogHeader>
+                <TeamCreate onSuccess={() => setIsCreateModalOpen(false)} />
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              variant="outline"
+              className="shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-xl font-bold border-2"
+              onClick={() => onNavigate("user-signup")}
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              유저 생성
+            </Button>
+          </div>
         </div>
 
         <div className="mb-10 text-center md:text-left">

@@ -22,6 +22,7 @@ interface TeamCreateProps {
 export function TeamCreate({ onSuccess }: TeamCreateProps) {
   const [formData, setFormData] = useState({
     name: "",
+    description: "",
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -30,6 +31,7 @@ export function TeamCreate({ onSuccess }: TeamCreateProps) {
     alert("팀이 생성되었습니다!")
     setFormData({
       name: "",
+      description: "",
     })
     if (onSuccess) onSuccess()
   }
