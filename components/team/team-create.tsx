@@ -15,32 +15,28 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-export function TeamCreate() {
+interface TeamCreateProps {
+  onSuccess?: () => void
+}
+
+export function TeamCreate({ onSuccess }: TeamCreateProps) {
   const [formData, setFormData] = useState({
     name: "",
-    description: "",
-    visibility: "",
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] Team created:", formData)
+    console.log("Team created:", formData)
     alert("팀이 생성되었습니다!")
     setFormData({
       name: "",
-      description: "",
-      visibility: "",
     })
+    if (onSuccess) onSuccess()
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">팀 생성</h1>
-        <p className="text-muted-foreground mt-1">새로운 팀을 만들어 협업을 시작하세요</p>
-      </div>
-
-      <Card className="max-w-2xl">
+    <div className="p-0">
+      <Card className="border-0 shadow-none">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -70,7 +66,7 @@ export function TeamCreate() {
                     required
                   />
                 </div>
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="visibility">공개 설정</Label>
                   <Select
                     value={formData.visibility}
@@ -85,7 +81,7 @@ export function TeamCreate() {
                       <SelectItem value="invite">초대만</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                </div> */}
               </div>
             </div>
 

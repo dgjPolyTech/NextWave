@@ -1,16 +1,26 @@
 "use client"
 
+import { useState } from "react"
 import { Bell, Settings, MoreVertical, Play, Pause, Trash2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { NotificationCreate } from "@/components/notification/notification-create"
+
 
 const mockRules = [
   {
@@ -69,6 +79,8 @@ const triggerLabels: Record<string, string> = {
 }
 
 export function NotificationRules() {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+
   return (
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
@@ -76,10 +88,20 @@ export function NotificationRules() {
           <h1 className="text-3xl font-bold text-foreground">규칙 알림</h1>
           <p className="text-muted-foreground mt-1">자동 알림 규칙을 관리하세요</p>
         </div>
-        <Button>
-          <Settings className="h-4 w-4 mr-2" />
-          새 규칙 추가
-        </Button>
+        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Settings className="h-4 w-4 mr-2" />
+              새 규칙 추가
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>새 규칙 추가</DialogTitle>
+            </DialogHeader>
+            <NotificationCreate onSuccess={() => setIsCreateModalOpen(false)} />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="space-y-4">

@@ -1,43 +1,54 @@
 "use client"
 
-import { useState } from "react"
-import { AppSidebar } from "@/components/app-sidebar"
+import { useNavigation } from "@/hooks/use-navigation"
+import { MainPage } from "@/components/main/main-page"
 import { Dashboard } from "@/components/dashboard"
-import { ScheduleCreate } from "@/components/schedule/schedule-create"
 import { ScheduleView } from "@/components/schedule/schedule-view"
+import { ScheduleDetail } from "@/components/schedule/schedule-detail"
 import { MemoWrite } from "@/components/memo/memo-write"
 import { MemoShare } from "@/components/memo/memo-share"
+import { MemoDetail } from "@/components/memo/memo-detail"
 import { TeamCreate } from "@/components/team/team-create"
 import { TeamInvite } from "@/components/team/team-invite"
 import { NotificationCreate } from "@/components/notification/notification-create"
 import { NotificationRules } from "@/components/notification/notification-rules"
 
-type PageType = 
-  | "dashboard"
-  | "schedule-create"
-  | "schedule-view"
-  | "memo-write"
-  | "memo-share"
-  | "team-create"
-  | "team-invite"
-  | "notification-create"
-  | "notification-rules"
-
 export default function Home() {
-  const [currentPage, setCurrentPage] = useState<PageType>("dashboard")
+  const { 
+    currentPage, 
+    setCurrentPage, 
+    selectedMemo, 
+    setSelectedMemo,
+    selectedSchedule,
+    setSelectedSchedule 
+  } = useNavigation()
+
+  const handleViewMemo = (memo: any) => {
+    setSelectedMemo(memo)
+    setCurrentPage("memo-detail")
+  }
+
+  const handleViewSchedule = (schedule: any) => {
+    setSelectedSchedule(schedule)
+    setCurrentPage("schedule-detail")
+  }
 
   const renderContent = () => {
     switch (currentPage) {
+      case "main":
+        return <MainPage onSelectTeam={() => setCurrentPage("dashboard")} onNavigate={setCurrentPage} />
       case "dashboard":
         return <Dashboard onNavigate={setCurrentPage} />
-      case "schedule-create":
-        return <ScheduleCreate />
       case "schedule-view":
-        return <ScheduleView />
+        return <ScheduleView onSelectSchedule={handleViewSchedule} />
+      case "schedule-detail":
+        return <ScheduleDetail schedule={selectedSchedule} onBack={() => setCurrentPage("schedule-view")} />
       case "memo-write":
         return <MemoWrite />
       case "memo-share":
-        return <MemoShare />
+        return <MemoShare onViewMemo={handleViewMemo} />
+      case "memo-detail":
+        return <MemoDetail memo={selectedMemo} onBack={() => setCurrentPage("memo-share")} />
       case "team-create":
         return <TeamCreate />
       case "team-invite":
@@ -47,16 +58,10 @@ export default function Home() {
       case "notification-rules":
         return <NotificationRules />
       default:
-        return <Dashboard onNavigate={setCurrentPage} />
+        return <MainPage onSelectTeam={() => setCurrentPage("dashboard")} onNavigate={setCurrentPage} />
     }
   }
 
-  return (
-    <div className="flex min-h-screen">
-      <AppSidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-      <main className="flex-1 overflow-auto">
-        {renderContent()}
-      </main>
-    </div>
-  )
+  return renderContent()
 }
+

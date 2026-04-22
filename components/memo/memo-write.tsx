@@ -19,17 +19,17 @@ export function MemoWrite() {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
-    category: ""
+    schedule_id: ""
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] Memo created:", formData)
+    console.log("Memo created:", formData)
     alert("메모가 저장되었습니다!")
     setFormData({
       title: "",
       content: "",
-      category: ""
+      schedule_id: ""
     })
   }
 
@@ -61,20 +61,20 @@ export function MemoWrite() {
                   required
                 />
               </div>
+              {/* 이 부분은 나중에 db로부터 불러오게끔 수정 필요함. */}
               <div className="space-y-2">
-                <Label htmlFor="category">카테고리</Label>
+                <Label htmlFor="schedule_id">일정 선택</Label>
                 <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  value={formData.schedule_id}
+                  onValueChange={(value) => setFormData({ ...formData, schedule_id: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="meeting">회의록</SelectItem>
-                    <SelectItem value="idea">아이디어</SelectItem>
-                    <SelectItem value="task">업무</SelectItem>
-                    <SelectItem value="reference">참고자료</SelectItem>
+                    <SelectItem value="1">오전 회의</SelectItem>
+                    <SelectItem value="2">휴가</SelectItem>
+                    <SelectItem value="3">업무 미팅</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
