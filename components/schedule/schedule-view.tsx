@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Calendar, Clock, Users, MoreVertical, Plus } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -19,65 +19,45 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { ScheduleCreateForm } from "./schedule-create"
-
-const mockSchedules = [
-  {
-    id: 1,
-    title: "주간 팀 회의",
-    description: "이번 주 진행 상황 공유 및 다음 주 계획 논의",
-    startDate: "2026-04-21",
-    endDate: "2026-04-21",
-    // date: "2026-04-21",
-    // time: "10:00",
-    participants: ["김철수", "이영희", "박지민"],
-    status: "upcoming"
-  },
-  {
-    id: 2,
-    title: "주간 팀 회의2222",
-    description: "이번 주 진행 상황 공유 및 다음 주 계획 논의",
-    startDate: "2026-04-21",
-    endDate: "2026-04-21",
-    // date: "2026-04-21",
-    // time: "10:00",
-    participants: ["김철수", "이영희", "박지민"],
-    status: "upcoming"
-  }
-  // {
-  //   id: 2,
-  //   title: "프로젝트 킥오프",
-  //   description: "새 프로젝트 시작 미팅",
-  //   date: "2026-04-22",
-  //   time: "14:00",
-  //   participants: ["김철수", "최민수"],
-  //   status: "upcoming"
-  // },
-  // {
-  //   id: 3,
-  //   title: "디자인 리뷰",
-  //   description: "UI/UX 디자인 검토 및 피드백",
-  //   date: "2026-04-20",
-  //   time: "15:30",
-  //   participants: ["이영희", "박지민", "정소연"],
-  //   status: "completed"
-  // },
-  // {
-  //   id: 4,
-  //   title: "스프린트 회고",
-  //   description: "스프린트 2 회고 미팅",
-  //   date: "2026-04-23",
-  //   time: "11:00",
-  //   participants: ["전체 팀"],
-  //   status: "upcoming"
-  // }
-]
+import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 
 interface ScheduleViewProps {
-  onSelectSchedule?: (schedule: any) => void
+  onSelectSchedule?: (schedule: ScheduleResponse) => void
 }
 
 export function ScheduleView({ onSelectSchedule }: ScheduleViewProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  const fetchSchedules = async () => {
+    setIsLoading(true)
+    try {
+      const data = await scheduleService.getTeamSchedules(1) // Assuming team_id = 1 for now
+      setSchedules(data)
+    } catch (error) {
+      console.error("Failed to fetch schedules:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchSchedules()
+  }, [])
+
+  const handleCreateSuccess = () => {
+    setIsDialogOpen(false)
+    fetchSchedules()
+  }
+
+  const formatDateTime = (isoString: string) => {
+    const date = new Date(isoString)
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    })
+  }
 
   return (
     <div className="p-8 space-y-8 animate-in fade-in duration-500">
@@ -105,67 +85,77 @@ export function ScheduleView({ onSelectSchedule }: ScheduleViewProps) {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
-              <ScheduleCreateForm onSuccess={() => setIsDialogOpen(false)} />
+              <ScheduleCreateForm onSuccess={handleCreateSuccess} />
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      <div className="grid gap-4">
-        {mockSchedules.map((schedule) => (
-          <Card 
-            key={schedule.id} 
-            className="hover:shadow-md transition-all group cursor-pointer"
-            onClick={() => onSelectSchedule?.(schedule)}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "p-3 rounded-xl shadow-sm transition-colors",
-                    schedule.status === "completed" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
-                  )}>
-                    <Calendar className="h-5 w-5" />
+      {isLoading ? (
+        <div className="flex justify-center p-8">데이터를 불러오는 중...</div>
+      ) : schedules.length === 0 ? (
+        <div className="flex justify-center p-8 text-muted-foreground border rounded-lg border-dashed">
+          등록된 일정이 없습니다.
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {schedules.map((schedule) => (
+            <Card 
+              key={schedule.id} 
+              className="hover:shadow-md transition-all group cursor-pointer"
+              onClick={() => onSelectSchedule?.(schedule)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "p-3 rounded-xl shadow-sm transition-colors",
+                      schedule.status === "COMPLETED" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                    )}>
+                      <Calendar className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-semibold">{schedule.title}</CardTitle>
+                      <CardDescription className="line-clamp-1">{schedule.description}</CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-lg font-semibold">{schedule.title}</CardTitle>
-                    <CardDescription className="line-clamp-1">{schedule.description}</CardDescription>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={schedule.status === "COMPLETED" ? "secondary" : "default"} className="px-3">
+                      {schedule.status === "COMPLETED" ? "완료" : schedule.status === "PENDING" ? "대기중" : schedule.status}
+                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-32" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem>수정</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">삭제</DropdownMenuItem>
+                        <DropdownMenuItem>공유</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={schedule.status === "completed" ? "secondary" : "default"} className="px-3">
-                    {schedule.status === "completed" ? "완료" : "예정"}
-                  </Badge>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-32">
-                      <DropdownMenuItem>수정</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">삭제</DropdownMenuItem>
-                      <DropdownMenuItem>공유</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>{formatDateTime(schedule.start_time)} {schedule.end_time && `~ ${formatDateTime(schedule.end_time)}`}</span>
+                  </div>
+                  {/* API schema doesn't provide participants array in ScheduleResponse directly.
+                      We would need a separate call or adapt it later. For now omit or put placeholder */}
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <span className="truncate max-w-[200px]">담당자 목록</span>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>{schedule.startDate} ~ {schedule.endDate}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  <span className="truncate max-w-[200px]">{schedule.participants.join(", ")}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

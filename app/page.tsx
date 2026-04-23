@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useNavigation } from "@/hooks/use-navigation"
 import { MainPage } from "@/components/main/main-page"
 import { Dashboard } from "@/components/dashboard"
@@ -12,7 +13,6 @@ import { TeamCreate } from "@/components/team/team-create"
 import { TeamInvite } from "@/components/team/team-invite"
 import { NotificationCreate } from "@/components/notification/notification-create"
 import { NotificationRules } from "@/components/notification/notification-rules"
-
 import { UserSignUp } from "@/components/user/user-signup"
 
 export default function Home() {
@@ -24,6 +24,14 @@ export default function Home() {
     selectedSchedule,
     setSelectedSchedule
   } = useNavigation()
+
+  // 선택된 팀 ID를 전역적으로 관리
+  const [selectedTeamId, setSelectedTeamId] = useState<number>(0)
+
+  const handleSelectTeam = (teamId: number) => {
+    setSelectedTeamId(teamId)
+    setCurrentPage("dashboard")
+  }
 
   const handleViewMemo = (memo: any) => {
     setSelectedMemo(memo)
@@ -38,7 +46,7 @@ export default function Home() {
   const renderContent = () => {
     switch (currentPage) {
       case "main":
-        return <MainPage onSelectTeam={() => setCurrentPage("dashboard")} onNavigate={setCurrentPage} />
+        return <MainPage onSelectTeam={handleSelectTeam} onNavigate={setCurrentPage} />
       case "dashboard":
         return <Dashboard onNavigate={setCurrentPage} />
       case "schedule-view":
@@ -46,26 +54,25 @@ export default function Home() {
       case "schedule-detail":
         return <ScheduleDetail schedule={selectedSchedule} onBack={() => setCurrentPage("schedule-view")} />
       case "memo-write":
-        return <MemoWrite />
+        return <MemoWrite teamId={selectedTeamId} onSuccess={() => setCurrentPage("memo-share")} />
       case "memo-share":
-        return <MemoShare onViewMemo={handleViewMemo} />
+        return <MemoShare teamId={selectedTeamId} onViewMemo={handleViewMemo} />
       case "memo-detail":
         return <MemoDetail memo={selectedMemo} onBack={() => setCurrentPage("memo-share")} />
       case "team-create":
-        return <TeamCreate />
+        return <TeamCreate onSuccess={() => setCurrentPage("main")} />
       case "team-invite":
-        return <TeamInvite />
+        return <TeamInvite teamId={selectedTeamId} />
       case "notification-create":
-        return <NotificationCreate />
+        return <NotificationCreate teamId={selectedTeamId} />
       case "notification-rules":
-        return <NotificationRules />
+        return <NotificationRules teamId={selectedTeamId} />
       case "user-signup":
         return <UserSignUp />
       default:
-        return <MainPage onSelectTeam={() => setCurrentPage("dashboard")} onNavigate={setCurrentPage} />
+        return <MainPage onSelectTeam={handleSelectTeam} onNavigate={setCurrentPage} />
     }
   }
 
   return renderContent()
 }
-

@@ -30,7 +30,19 @@ export function ScheduleCreateForm({ onSuccess }: ScheduleCreateFormProps) {
     setIsLoading(true)
 
     try {
-      await scheduleService.createSchedule(formData)
+      const payload: any = {
+        title: formData.title,
+        description: formData.description || undefined,
+        start_time: new Date(formData.start_time).toISOString(),
+        status: formData.status,
+        team_id: formData.team_id
+      }
+
+      if (formData.end_time) {
+        payload.end_time = new Date(formData.end_time).toISOString()
+      }
+
+      await scheduleService.createSchedule(payload)
       alert("일정이 생성되었습니다!")
       setFormData({
         title: "",
@@ -41,9 +53,20 @@ export function ScheduleCreateForm({ onSuccess }: ScheduleCreateFormProps) {
         team_id: 1
       })
       if (onSuccess) onSuccess()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Schedule creation failed:", error)
-      alert("일정 저장 중 오류가 발생했습니다.")
+      const errorMsg = error.response?.data?.detail
+        || error.response?.data?.message
+        || error.message
+        || "알 수 없는 오류"
+
+      if (error.response?.status === 401) {
+        alert("인증이 필요합니다. 먼저 로그인해주세요.\n상세: " + errorMsg)
+      } else if (error.response?.status === 403) {
+        alert("권한이 없습니다. 팀 멤버인지 확인해주세요.\n상세: " + errorMsg)
+      } else {
+        alert("일정 저장 중 오류가 발생했습니다: " + errorMsg)
+      }
     } finally {
       setIsLoading(false)
     }

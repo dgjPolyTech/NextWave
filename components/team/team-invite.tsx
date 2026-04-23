@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Users, Mail, Link2, Copy, Check } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Users, Mail } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,32 +15,69 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { teamService, TeamMemberResponse } from "@/services/teamService"
 
-const mockTeamMembers = [
-  { id: 1, name: "김철수", email: "kim@example.com", role: "admin", status: "active" },
-  { id: 2, name: "이영희", email: "lee@example.com", role: "member", status: "active" },
-  { id: 3, name: "박지민", email: "park@example.com", role: "member", status: "active" },
-  { id: 4, name: "최민수", email: "choi@example.com", role: "member", status: "pending" },
-]
+interface TeamInviteProps {
+  teamId: number
+}
 
-export function TeamInvite() {
+export function TeamInvite({ teamId }: TeamInviteProps) {
   const [email, setEmail] = useState("")
-  const [role, setRole] = useState("")
-  const [copied, setCopied] = useState(false)
-  const inviteLink = "https://nextwave.app/invite/abc123"
+  const [role, setRole] = useState("member")
+  const [isLoading, setIsLoading] = useState(false)
+  const [members, setMembers] = useState<TeamMemberResponse[]>([])
+  const [isMembersLoading, setIsMembersLoading] = useState(true)
 
-  const handleInvite = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("[v0] Invite sent to:", email, "with role:", role)
-    alert(`${email}으로 초대 링크가 전송되었습니다!`)
-    setEmail("")
-    setRole("")
+  const fetchMembers = async () => {
+    setIsMembersLoading(true)
+    try {
+      const data = await teamService.getMembers(teamId)
+      setMembers(data)
+    } catch (error: any) {
+      console.error("Failed to fetch members:", error)
+    } finally {
+      setIsMembersLoading(false)
+    }
   }
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(inviteLink)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  useEffect(() => {
+    fetchMembers()
+  }, [teamId])
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    try {
+      await teamService.inviteMember(teamId, { email, role })
+      alert(`${email}을(를) 팀에 초대했습니다!`)
+      setEmail("")
+      setRole("member")
+      await fetchMembers()
+    } catch (error: any) {
+      console.error("Invite failed:", error)
+      const detail = error.response?.data?.detail
+      const msg = Array.isArray(detail)
+        ? detail.map((d: any) => `${d.loc?.join(".")}: ${d.msg}`).join("\n")
+        : detail || error.message || "알 수 없는 오류"
+      if (error.response?.status === 401) {
+        alert("인증이 필요합니다. 먼저 로그인해주세요.")
+      } else if (error.response?.status === 404) {
+        alert("해당 이메일의 유저를 찾을 수 없습니다.")
+      } else if (error.response?.status === 403) {
+        alert("팀원 초대는 리더만 가능합니다.")
+      } else {
+        alert("초대 중 오류가 발생했습니다:\n" + msg)
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const roleLabel = (role: string) => {
+    if (role === "leader") return "리더"
+    if (role === "member") return "멤버"
+    if (role === "guest") return "게스트"
+    return role
   }
 
   return (
@@ -57,7 +94,7 @@ export function TeamInvite() {
               <Mail className="h-5 w-5" />
               이메일로 초대
             </CardTitle>
-            <CardDescription>이메일 주소로 초대 링크를 보내세요</CardDescription>
+            <CardDescription>가입된 이메일로 팀원을 초대합니다</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleInvite} className="space-y-4">
@@ -79,41 +116,19 @@ export function TeamInvite() {
                     <SelectValue placeholder="역할 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">관리자</SelectItem>
                     <SelectItem value="member">멤버</SelectItem>
-                    <SelectItem value="viewer">뷰어</SelectItem>
+                    <SelectItem value="guest">게스트</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="submit" className="w-full">
-                초대 보내기
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "초대 중..." : "초대 보내기"}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Link2 className="h-5 w-5" />
-              초대 링크
-            </CardTitle>
-            <CardDescription>링크를 공유하여 팀에 초대하세요</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input value={inviteLink} readOnly className="bg-muted" />
-              <Button variant="outline" onClick={handleCopyLink}>
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              이 링크는 7일간 유효합니다
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -122,32 +137,31 @@ export function TeamInvite() {
             <CardDescription>팀에 참여 중인 멤버들입니다</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockTeamMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center justify-between p-3 rounded-lg border"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{member.name}</p>
-                      <p className="text-sm text-muted-foreground">{member.email}</p>
+            {isMembersLoading ? (
+              <p className="text-sm text-muted-foreground text-center py-4">불러오는 중...</p>
+            ) : members.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">팀원이 없습니다.</p>
+            ) : (
+              <div className="space-y-3">
+                {members.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarFallback>{member.user_name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{member.user_name}</p>
+                        <p className="text-xs text-muted-foreground">{member.team_name}</p>
+                      </div>
                     </div>
+                    <Badge variant="outline">{roleLabel(member.role)}</Badge>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant={member.status === "active" ? "default" : "secondary"}>
-                      {member.status === "active" ? "활성" : "대기중"}
-                    </Badge>
-                    <Badge variant="outline">
-                      {member.role === "admin" ? "관리자" : "멤버"}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
