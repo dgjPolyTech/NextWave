@@ -5,22 +5,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { ScheduleResponse } from "@/services/scheduleService"
 
 interface ScheduleDetailProps {
-  schedule: {
-    id: number
-    title: string
-    description: string
-    startDate: string
-    endDate: string
-    participants: string[]
-    status: string
-  }
+  schedule: ScheduleResponse | null
   onBack: () => void
 }
 
 export function ScheduleDetail({ schedule, onBack }: ScheduleDetailProps) {
   if (!schedule) return null
+
+  const formatDateTime = (isoString: string | null) => {
+    if (!isoString) return "-"
+    const date = new Date(isoString)
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    })
+  }
 
   return (
     <div className="p-8 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -34,17 +36,17 @@ export function ScheduleDetail({ schedule, onBack }: ScheduleDetailProps) {
       </Button>
 
       <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden rounded-3xl">
-        <div className={`h-2 w-full ${schedule.status === "completed" ? "bg-muted" : "bg-primary"}`} />
+        <div className={`h-2 w-full ${schedule.status === "COMPLETED" ? "bg-muted" : "bg-primary"}`} />
         <CardHeader className="pb-6 p-8">
           <div className="flex items-center justify-between mb-4">
             <Badge
-              variant={schedule.status === "completed" ? "secondary" : "default"}
+              variant={schedule.status === "COMPLETED" ? "secondary" : "default"}
               className="px-4 py-1 text-xs font-bold uppercase tracking-wider rounded-full"
             >
-              {schedule.status === "completed" ? (
+              {schedule.status === "COMPLETED" ? (
                 <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> 완료</span>
               ) : (
-                <span className="flex items-center gap-1"><AlertCircle className="h-3 w-3" /> 예정</span>
+                <span className="flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {schedule.status === "PENDING" ? "대기중" : schedule.status}</span>
               )}
             </Badge>
             <div className="text-sm text-muted-foreground flex items-center gap-2">
@@ -56,7 +58,7 @@ export function ScheduleDetail({ schedule, onBack }: ScheduleDetailProps) {
             {schedule.title}
           </CardTitle>
           <CardDescription className="text-lg leading-relaxed text-foreground/70">
-            {schedule.description}
+            {schedule.description || "설명이 없습니다."}
           </CardDescription>
         </CardHeader>
 
@@ -72,12 +74,12 @@ export function ScheduleDetail({ schedule, onBack }: ScheduleDetailProps) {
                 <div className="flex flex-col gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">시작일 (start_time)</p>
-                    <p className="text-xl font-bold">{schedule.startDate}</p>
+                    <p className="text-xl font-bold">{formatDateTime(schedule.start_time)}</p>
                   </div>
                   <div className="w-8 h-px bg-border ml-1" />
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">종료일 (end_time)</p>
-                    <p className="text-xl font-bold">{schedule.endDate}</p>
+                    <p className="text-xl font-bold">{formatDateTime(schedule.end_time)}</p>
                   </div>
                 </div>
               </div>
@@ -88,11 +90,9 @@ export function ScheduleDetail({ schedule, onBack }: ScheduleDetailProps) {
                 <Users className="h-4 w-4" /> 참여자
               </h3>
               <div className="flex flex-wrap gap-2">
-                {schedule.participants.map((participant, index) => (
-                  <Badge key={index} variant="secondary" className="px-3 py-1.5 rounded-lg text-sm font-medium border border-border/50">
-                    {participant}
-                  </Badge>
-                ))}
+                <Badge variant="secondary" className="px-3 py-1.5 rounded-lg text-sm font-medium border border-border/50">
+                  담당자 미정 (API 연동 필요)
+                </Badge>
               </div>
             </div>
           </div>

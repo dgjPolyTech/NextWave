@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import {
   Calendar,
   FileText,
@@ -11,12 +12,18 @@ import {
   MessageSquare,
   TrendingUp,
   CheckCircle2,
-  CalendarDays
+  CalendarDays,
+  Loader2
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+
+import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
+import { memoService, MemoResponse } from "@/services/memoService"
+import { notificationService, NotificationResponse } from "@/services/notificationService"
+import { userService, UserResponse } from "@/services/userService"
 
 type PageType =
   | "dashboard"
@@ -29,36 +36,70 @@ type PageType =
   | "notification-rules"
 
 interface DashboardProps {
+  teamId?: number
   onNavigate: (page: PageType) => void
 }
 
-// Dummy Data
-const DUMMY_SCHEDULES = [
-  { id: 1, title: "주간 팀 회의", time: "오전 10:00", type: "회의", color: "bg-blue-500" },
-  { id: 2, title: "프로젝트 마일스톤 리뷰", time: "오후 2:00", type: "기획", color: "bg-purple-500" },
-  { id: 3, title: "디자인 시스템 업데이트", time: "오후 4:30", type: "개발", color: "bg-emerald-500" },
-]
+export function Dashboard({ teamId, onNavigate }: DashboardProps) {
+  const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
+  const [memos, setMemos] = useState<MemoResponse[]>([])
+  const [notifications, setNotifications] = useState<NotificationResponse[]>([])
+  const [user, setUser] = useState<UserResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-const DUMMY_MEMOS = [
-  { id: 1, title: "Q2 마케팅 전략", author: "김철수", date: "2024.04.21", avatar: "KS" },
-  { id: 2, title: "신규 기능 상세 설계서", author: "이영희", date: "2024.04.20", avatar: "YH" },
-  { id: 3, title: "팀 회식 장소 투표 결과", author: "박지민", date: "2024.04.19", avatar: "JM" },
-]
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const currentUser = await userService.getMe()
+        setUser(currentUser)
 
-const DUMMY_NOTIFICATIONS = [
-  { id: 1, content: "새로운 메모 'Q2 마케팅 전략'이 공유되었습니다.", time: "5분 전", icon: FileText, color: "text-blue-500" },
-  { id: 2, content: "오후 2:00에 예정된 회의 알림입니다.", time: "1시간 전", icon: Calendar, color: "text-purple-500" },
-  { id: 3, content: "이영희님이 당신을 '디자인 협업' 팀에 초대했습니다.", time: "3시간 전", icon: Users, color: "text-emerald-500" },
-]
+        if (teamId) {
+          const [teamSchedules, teamMemos, allNotifications] = await Promise.all([
+            scheduleService.getTeamSchedules(teamId),
+            memoService.getTeamMemos(teamId),
+            notificationService.getMyNotifications()
+          ])
 
-export function Dashboard({ onNavigate }: DashboardProps) {
+          setSchedules(teamSchedules || [])
+          setMemos(teamMemos || [])
+
+          // Filter notifications by team schedules
+          const teamScheduleIds = new Set((teamSchedules || []).map(s => s.id))
+          const filteredNotifications = (allNotifications || []).filter(n => teamScheduleIds.has(n.schedule_id))
+          setNotifications(filteredNotifications)
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [teamId])
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">대시보드 데이터를 불러오는 중...</p>
+      </div>
+    )
+  }
+
+  // Get first 3 items for preview
+  const recentSchedules = schedules.slice(0, 3)
+  const recentMemos = memos.slice(0, 3)
+  const recentNotifications = notifications.slice(0, 3)
+
   return (
     <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
       {/* Hero Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-            안녕하세요, 팀원님! 👋
+            안녕하세요, {user?.username || '팀원'}님! 👋
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">
             오늘도 NextWave와 함께 효율적인 협업을 시작해보세요.
@@ -84,10 +125,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "예정된 일정", value: "3개", icon: CalendarDays, color: "text-blue-500" },
-          { label: "새 알림", value: "5개", icon: Bell, color: "text-amber-500" },
-          { label: "공유된 메모", value: "12개", icon: MessageSquare, color: "text-emerald-500" },
-          // { label: "팀 활동성", value: "+24%", icon: TrendingUp, color: "text-purple-500" },
+          { label: "예정된 일정", value: `${schedules.length}개`, icon: CalendarDays, color: "text-blue-500" },
+          { label: "새 알림", value: `${notifications.length}개`, icon: Bell, color: "text-amber-500" },
+          { label: "공유된 메모", value: `${memos.length}개`, icon: MessageSquare, color: "text-emerald-500" },
         ].map((stat, i) => (
           <Card key={i} className="hover:bg-accent/50 transition-colors">
             <CardContent className="p-6 flex items-center justify-between">
@@ -113,27 +153,29 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               <CardTitle className="text-xl font-semibold flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" /> 예정된 일정
               </CardTitle>
-              <CardDescription>오늘 예정된 주요 일정입니다</CardDescription>
+              <CardDescription>최근 예정된 일정입니다</CardDescription>
             </div>
             <Button variant="ghost" size="icon" onClick={() => onNavigate("schedule-view")}>
               <ArrowRight className="h-4 w-4" />
             </Button>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
-            {DUMMY_SCHEDULES.map((item) => (
+            {recentSchedules.length > 0 ? recentSchedules.map((item) => (
               <div key={item.id} className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors group">
-                <div className={`w-1 h-10 rounded-full ${item.color}`} />
+                <div className={`w-1 h-10 rounded-full bg-blue-500`} />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{item.title}</p>
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" /> {item.time}
+                    <Clock className="h-3 w-3" /> {new Date(item.start_time).toLocaleString()}
                   </div>
                 </div>
                 <Badge variant="secondary" className="group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                  {item.type}
+                  {item.status || "예정"}
                 </Badge>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-8 text-muted-foreground text-sm">일정이 없습니다.</div>
+            )}
           </CardContent>
         </Card>
 
@@ -151,22 +193,24 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </Button>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
-            {DUMMY_MEMOS.map((item) => (
+            {recentMemos.length > 0 ? recentMemos.map((item) => (
               <div key={item.id} className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors">
                 <Avatar className="h-10 w-10 border">
-                  <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">
-                    {item.avatar}
+                  <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold uppercase">
+                    {item.author_name ? item.author_name.substring(0, 2) : "UN"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{item.title}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {item.author} • {item.date}
+                    {item.author_name} • {new Date(item.created_at).toLocaleDateString()}
                   </p>
                 </div>
                 <CheckCircle2 className="h-4 w-4 text-muted-foreground/30" />
               </div>
-            ))}
+            )) : (
+               <div className="text-center py-8 text-muted-foreground text-sm">작성된 메모가 없습니다.</div>
+            )}
           </CardContent>
         </Card>
 
@@ -184,19 +228,29 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </Button>
           </CardHeader>
           <CardContent className="flex-1">
-            <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-muted before:via-muted before:to-transparent">
-              {DUMMY_NOTIFICATIONS.map((item) => (
-                <div key={item.id} className="relative flex items-start gap-4 pl-0">
-                  <div className={`mt-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-background shadow-sm z-10 ${item.color}`}>
-                    <item.icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex flex-col gap-1 pt-1">
-                    <p className="text-sm leading-relaxed">{item.content}</p>
-                    <span className="text-xs text-muted-foreground">{item.time}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {recentNotifications.length > 0 ? (
+              <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-muted before:via-muted before:to-transparent">
+                {recentNotifications.map((item) => {
+                  // Find schedule title if possible
+                  const schedule = schedules.find(s => s.id === item.schedule_id)
+                  const content = schedule ? `'${schedule.title}' 일정이 다가오고 있습니다.` : "새로운 알림이 도착했습니다."
+                  
+                  return (
+                    <div key={item.id} className="relative flex items-start gap-4 pl-0">
+                      <div className={`mt-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-background shadow-sm z-10 text-blue-500`}>
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <div className="flex flex-col gap-1 pt-1">
+                        <p className="text-sm leading-relaxed">{content}</p>
+                        <span className="text-xs text-muted-foreground">{new Date(item.remind_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground text-sm">최근 알림이 없습니다.</div>
+            )}
           </CardContent>
         </Card>
 

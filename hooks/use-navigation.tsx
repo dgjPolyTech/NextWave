@@ -14,6 +14,7 @@ export type PageType =
   | "team-invite"
   | "notification-create"
   | "notification-rules"
+  | "user-signup"
 
 interface NavigationContextType {
   currentPage: PageType

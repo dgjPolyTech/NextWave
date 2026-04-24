@@ -1,38 +1,76 @@
 "use client"
 
 import { useState } from "react"
-import { Calendar, Clock, Users } from "lucide-react"
+import { Calendar, Clock } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { scheduleService } from "@/services/scheduleService"
 
 interface ScheduleCreateFormProps {
+  teamId?: number
   onSuccess?: () => void
 }
 
-export function ScheduleCreateForm({ onSuccess }: ScheduleCreateFormProps) {
+export function ScheduleCreateForm({ teamId, onSuccess }: ScheduleCreateFormProps) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    startDate: "",
-    endDate: "",
-    participants: ""
+    start_time: "",
+    end_time: "",
+    status: "PENDING",
+    team_id: teamId || 1
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Schedule created:", formData)
-    alert("일정이 생성되었습니다!")
-    setFormData({
-      title: "",
-      description: "",
-      startDate: "",
-      endDate: "",
-      participants: ""
-    })
-    if (onSuccess) onSuccess()
+    setIsLoading(true)
+
+    try {
+      const payload: any = {
+        title: formData.title,
+        description: formData.description || undefined,
+        start_time: new Date(formData.start_time).toISOString(),
+        status: formData.status,
+        team_id: formData.team_id
+      }
+
+      if (formData.end_time) {
+        payload.end_time = new Date(formData.end_time).toISOString()
+      }
+
+      await scheduleService.createSchedule(payload)
+      alert("일정이 생성되었습니다!")
+      setFormData({
+        title: "",
+        description: "",
+        start_time: "",
+        end_time: "",
+        status: "PENDING",
+        team_id: teamId || 1
+      })
+      if (onSuccess) onSuccess()
+    } catch (error: any) {
+      console.error("Schedule creation failed:", error)
+      const errorMsg = error.response?.data?.detail
+        || error.response?.data?.message
+        || error.message
+        || "알 수 없는 오류"
+
+      if (error.response?.status === 401) {
+        alert("인증이 필요합니다. 먼저 로그인해주세요.\n상세: " + errorMsg)
+      } else if (error.response?.status === 403) {
+        alert("권한이 없습니다. 팀 멤버인지 확인해주세요.\n상세: " + errorMsg)
+      } else {
+        alert("일정 저장 중 오류가 발생했습니다: " + errorMsg)
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -47,7 +85,7 @@ export function ScheduleCreateForm({ onSuccess }: ScheduleCreateFormProps) {
       <CardContent className="px-0 pb-0">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">일정 제목</Label>{/* title  */}
+            <Label htmlFor="title">일정 제목</Label>
             <Input
               id="title"
               placeholder="예: 주간 팀 회의"
@@ -58,7 +96,7 @@ export function ScheduleCreateForm({ onSuccess }: ScheduleCreateFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">설명</Label>{/* description  */}
+            <Label htmlFor="description">설명</Label>
             <Textarea
               id="description"
               placeholder="회의 안건이나 주요 내용을 입력하세요"
@@ -70,49 +108,40 @@ export function ScheduleCreateForm({ onSuccess }: ScheduleCreateFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDate" className="flex items-center gap-2">
+              <Label htmlFor="start_time" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 시작일
               </Label>
               <Input
-                id="startDate"
+                id="start_time"
                 type="datetime-local"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                value={formData.start_time}
+                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="endDate" className="flex items-center gap-2">
+              <Label htmlFor="end_time" className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 종료일
               </Label>
               <Input
-                id="endDate"
+                id="end_time"
                 type="datetime-local"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                value={formData.end_time}
+                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="participants" className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              담당자
-            </Label>
-            <Input
-              id="participants"
-              placeholder="참여자 성함 또는 이메일"
-              value={formData.participants}
-              onChange={(e) => setFormData({ ...formData, participants: e.target.value })}
-            />
-          </div>
-
           <div className="pt-4">
-            <Button type="submit" className="w-full shadow-md hover:shadow-lg transition-all">
-              일정 생성하기
+            <Button
+              type="submit"
+              className="w-full shadow-md hover:shadow-lg transition-all"
+              disabled={isLoading}
+            >
+              {isLoading ? "일정 생성 중..." : "일정 생성하기"}
             </Button>
           </div>
         </form>
