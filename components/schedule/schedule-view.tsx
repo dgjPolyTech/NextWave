@@ -22,10 +22,11 @@ import { ScheduleCreateForm } from "./schedule-create"
 import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 
 interface ScheduleViewProps {
+  teamId?: number
   onSelectSchedule?: (schedule: ScheduleResponse) => void
 }
 
-export function ScheduleView({ onSelectSchedule }: ScheduleViewProps) {
+export function ScheduleView({ teamId, onSelectSchedule }: ScheduleViewProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -33,7 +34,8 @@ export function ScheduleView({ onSelectSchedule }: ScheduleViewProps) {
   const fetchSchedules = async () => {
     setIsLoading(true)
     try {
-      const data = await scheduleService.getTeamSchedules(1) // Assuming team_id = 1 for now
+      if (!teamId) return;
+      const data = await scheduleService.getTeamSchedules(teamId)
       setSchedules(data)
     } catch (error) {
       console.error("Failed to fetch schedules:", error)
@@ -43,8 +45,8 @@ export function ScheduleView({ onSelectSchedule }: ScheduleViewProps) {
   }
 
   useEffect(() => {
-    fetchSchedules()
-  }, [])
+    if (teamId) fetchSchedules()
+  }, [teamId])
 
   const handleCreateSuccess = () => {
     setIsDialogOpen(false)
@@ -85,7 +87,7 @@ export function ScheduleView({ onSelectSchedule }: ScheduleViewProps) {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
-              <ScheduleCreateForm onSuccess={handleCreateSuccess} />
+              <ScheduleCreateForm teamId={teamId} onSuccess={handleCreateSuccess} />
             </DialogContent>
           </Dialog>
         </div>

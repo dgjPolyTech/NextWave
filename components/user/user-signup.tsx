@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { userService } from "@/services/userService"
+import { useToast } from "@/components/ui/use-toast"
 
 interface UserSignUpProps {
     onSuccess?: () => void
@@ -19,6 +20,7 @@ export function UserSignUp({ onSuccess }: UserSignUpProps) {
         password: "",
     })
     const [isLoading, setIsLoading] = useState(false)
+    const { toast } = useToast()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -31,7 +33,10 @@ export function UserSignUp({ onSuccess }: UserSignUpProps) {
                 password: formData.password,
                 image_path: null
             })
-            alert("회원가입이 완료되었습니다!")
+            toast({
+                title: "회원가입 완료",
+                description: "회원가입이 성공적으로 완료되었습니다!",
+            })
             setFormData({
                 username: "",
                 email: "",
@@ -55,11 +60,11 @@ export function UserSignUp({ onSuccess }: UserSignUpProps) {
             }
             
             if (error.response?.status === 400) {
-                alert("회원가입 실패: 이미 존재하는 이메일이거나 잘못된 요청입니다.\n상세: " + errorMsg)
+                toast({ title: "회원가입 실패", description: "이미 존재하는 이메일이거나 잘못된 요청입니다.\n상세: " + errorMsg, variant: "destructive" })
             } else if (error.response?.status === 422) {
-                alert("입력값이 올바르지 않습니다 (Validation Error):\n" + errorMsg)
+                toast({ title: "회원가입 실패", description: "입력값이 올바르지 않습니다.\n" + errorMsg, variant: "destructive" })
             } else {
-                alert("회원가입 중 오류가 발생했습니다: " + errorMsg)
+                toast({ title: "회원가입 실패", description: "회원가입 중 오류가 발생했습니다: " + errorMsg, variant: "destructive" })
             }
         } finally {
             setIsLoading(false)

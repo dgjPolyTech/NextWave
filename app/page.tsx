@@ -48,9 +48,9 @@ export default function Home() {
       case "main":
         return <MainPage onSelectTeam={handleSelectTeam} onNavigate={setCurrentPage} />
       case "dashboard":
-        return <Dashboard onNavigate={setCurrentPage} />
+        return <Dashboard teamId={selectedTeamId} onNavigate={setCurrentPage} />
       case "schedule-view":
-        return <ScheduleView onSelectSchedule={handleViewSchedule} />
+        return <ScheduleView teamId={selectedTeamId} onSelectSchedule={handleViewSchedule} />
       case "schedule-detail":
         return <ScheduleDetail schedule={selectedSchedule} onBack={() => setCurrentPage("schedule-view")} />
       case "memo-write":

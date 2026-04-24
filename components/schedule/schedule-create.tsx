@@ -10,17 +10,18 @@ import { Label } from "@/components/ui/label"
 import { scheduleService } from "@/services/scheduleService"
 
 interface ScheduleCreateFormProps {
+  teamId?: number
   onSuccess?: () => void
 }
 
-export function ScheduleCreateForm({ onSuccess }: ScheduleCreateFormProps) {
+export function ScheduleCreateForm({ teamId, onSuccess }: ScheduleCreateFormProps) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     start_time: "",
     end_time: "",
     status: "PENDING",
-    team_id: 1
+    team_id: teamId || 1
   })
 
   const [isLoading, setIsLoading] = useState(false)
@@ -50,7 +51,7 @@ export function ScheduleCreateForm({ onSuccess }: ScheduleCreateFormProps) {
         start_time: "",
         end_time: "",
         status: "PENDING",
-        team_id: 1
+        team_id: teamId || 1
       })
       if (onSuccess) onSuccess()
     } catch (error: any) {
